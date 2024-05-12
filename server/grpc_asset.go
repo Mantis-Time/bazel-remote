@@ -115,12 +115,51 @@ func (s *grpcServer) FetchBlob(ctx context.Context, req *asset.FetchBlobRequest)
 		}
 	}
 
+	if sha256Str == "" {
+	  // log the condition
+	  s.errorLogger.Printf("SHA for uri %s not set; Hence defaulting to the URIs", req.GetUris())
+	  for _, uri := range req.GetUris() {
+      found, size := s.cache.Contains(ctx, cache.CAS, uri, -1)
+      if !found {
+        s.errorLogger.Printf("CAS for uri %s sha %s not found in cache", req.GetUris(), sha256Str)
+        continue
+      }
+
+      if size < 0 {
+        // We don't know the size yet (bad http backend?).
+        r, actualSize, err := s.cache.Get(ctx, cache.CAS, uri, -1, 0)
+        if r != nil {
+          defer r.Close()
+        }
+        if err != nil || actualSize < 0 {
+          s.errorLogger.Printf("failed to get CAS %s from proxy backend size: %d err: %v",
+            uri, actualSize, err)
+          continue
+        }
+        size = actualSize
+      }
+
+      return &asset.FetchBlobResponse{
+        Status: &status.Status{Code: int32(codes.OK)},
+        BlobDigest: &pb.Digest{
+          Hash:      sha256Str,
+          SizeBytes: size,
+        },
+      }, nil
+    }
+  }
+
 	// Cache miss.
 
 	// See if we can download one of the URIs.
 
 	for _, uri := range req.GetUris() {
-		ok, actualHash, size := s.fetchItem(ctx, uri, sha256Str)
+	  sha256 := sha256Str
+	  if sha256 == "" {
+	    s.errorLogger.Printf("SHA for uri %s not set; Hence defaulting to the URI", uri)
+	    sha256 = uri
+    }
+		ok, actualHash, size := s.fetchItem(ctx, uri, sha256)
 		if ok {
 			return &asset.FetchBlobResponse{
 				Status: &status.Status{Code: int32(codes.OK)},
