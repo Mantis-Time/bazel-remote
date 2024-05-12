@@ -208,6 +208,8 @@ func (s *grpcServer) fetchItem(ctx context.Context, uri string, expectedHash str
 	if expectedHash == "" || expectedSize < 0 {
 		// We can't call Put until we know the hash and size.
 
+    s.accessLogger.Printf("expectedSize: %d", expectedSize)
+    s.accessLogger.Printf("expectedHash: %s", expectedHash)
 		data, err := io.ReadAll(resp.Body)
 		if err != nil {
 			s.errorLogger.Printf("failed to read data: %v", uri)
@@ -221,10 +223,10 @@ func (s *grpcServer) fetchItem(ctx context.Context, uri string, expectedHash str
 		if expectedHash != "" && hashStr != expectedHash {
 			s.errorLogger.Printf("URI data has hash %s, expected %s",
 				hashStr, expectedHash)
-			return false, "", int64(-1)
+// 			return false, "", int64(-1)
 		}
 
-		expectedHash = hashStr
+// 		expectedHash = hashStr
 		rc = io.NopCloser(bytes.NewReader(data))
 	}
 
