@@ -1,6 +1,6 @@
 load("@bazel_gazelle//:def.bzl", "gazelle")
 load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
-load("@rules_oci//oci:defs.bzl", "oci_image", "oci_push")
+load("@rules_oci//oci:defs.bzl", "oci_image", "oci_push", "oci_tarball")
 load("@rules_pkg//:pkg.bzl", "pkg_tar")
 
 gazelle(
@@ -168,11 +168,25 @@ oci_image(
 # Background:
 # https://github.com/bazelbuild/rules_docker/issues/1599
 
+oci_tarball(
+    name = "bazel-remote-image-tarball",
+    image = ":bazel-remote-image",
+    repo_tags = ["localhost:5001/mantis-time/bazel-remote:latest"],
+)
+
+sh_binary(
+    name = "push_to_dockerregistry",
+    srcs = ["push.sh"],
+    args = ["localhost:5001/mantis-time/bazel-remote:latest"],
+    data = [":bazel-remote-image-tarball"],  # Any data files your script requires
+    visibility = ["//visibility:public"],
+)
+
 oci_push(
     name = "push_to_dockerhub_amd64",
     image = ":bazel-remote-image",
     remote_tags = ["tmp-amd64"],
-    repository = "buchgr/bazel-remote-cache",
+    repository = "localhost:5001/mantis-time/bazel-remote",
     visibility = ["//visibility:public"],
 )
 
