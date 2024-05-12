@@ -87,6 +87,7 @@ func (s *grpcServer) FetchBlob(ctx context.Context, req *asset.FetchBlobRequest)
 
 			found, size := s.cache.Contains(ctx, cache.CAS, sha256Str, -1)
 			if !found {
+			  s.errorLogger.Printf("CAS for uri %s sha %s not found in cache", req.GetUris(), sha256Str)
 				continue
 			}
 
