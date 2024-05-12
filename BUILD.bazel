@@ -174,11 +174,25 @@ oci_tarball(
     repo_tags = ["localhost:5001/mantis-time/bazel-remote:latest"],
 )
 
+oci_tarball(
+    name = "bazel-remote-image-tarball-arm64",
+    image = ":bazel-remote-image-arm64",
+    repo_tags = ["localhost:5001/mantis-time/bazel-remote:latest"],
+)
+
 sh_binary(
     name = "push_to_dockerregistry",
     srcs = ["push.sh"],
     args = ["localhost:5001/mantis-time/bazel-remote:latest"],
     data = [":bazel-remote-image-tarball"],  # Any data files your script requires
+    visibility = ["//visibility:public"],
+)
+
+sh_binary(
+    name = "push_to_dockerregistry-arm64",
+    srcs = ["push.sh"],
+    args = ["localhost:5001/mantis-time/bazel-remote-arm64:latest"],
+    data = [":bazel-remote-image-tarball-arm64"],  # Any data files your script requires
     visibility = ["//visibility:public"],
 )
 
