@@ -56,6 +56,9 @@ func (s *grpcServer) FetchBlob(ctx context.Context, req *asset.FetchBlobRequest)
 		return nil, errNilFetchBlobRequest
 	}
 
+  // log the request
+  s.accessLogger.Printf("GRPC ASSET FETCH %v", req)
+
   // log the request qualifiers
   s.accessLogger.Printf("GRPC ASSET FETCH %v", req.GetQualifiers())
 	for _, q := range req.GetQualifiers() {
