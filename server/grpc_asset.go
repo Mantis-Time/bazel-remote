@@ -56,11 +56,11 @@ func (s *grpcServer) FetchBlob(ctx context.Context, req *asset.FetchBlobRequest)
 		return nil, errNilFetchBlobRequest
 	}
 
-	// log the request
-	s.accessLogger.Printf("GRPC ASSET FETCH %v", req)
+  // log the request
+  s.accessLogger.Printf("GRPC ASSET FETCH %v", req)
 
-	// log the request qualifiers
-	s.accessLogger.Printf("GRPC ASSET FETCH %v", req.GetQualifiers())
+  // log the request qualifiers
+  s.accessLogger.Printf("GRPC ASSET FETCH %v", req.GetQualifiers())
 	for _, q := range req.GetQualifiers() {
 		if q == nil {
 			return &asset.FetchBlobResponse{
@@ -87,7 +87,7 @@ func (s *grpcServer) FetchBlob(ctx context.Context, req *asset.FetchBlobRequest)
 
 			found, size := s.cache.Contains(ctx, cache.CAS, sha256Str, -1)
 			if !found {
-				s.errorLogger.Printf("CAS for uri %s sha %s not found in cache", req.GetUris(), sha256Str)
+			  s.errorLogger.Printf("CAS for uri %s sha %s not found in cache", req.GetUris(), sha256Str)
 				continue
 			}
 
@@ -116,52 +116,50 @@ func (s *grpcServer) FetchBlob(ctx context.Context, req *asset.FetchBlobRequest)
 	}
 
 	if sha256Str == "" {
-		// log the condition
-		s.errorLogger.Printf("SHA for uri %s not set; Hence defaulting to the URIs", req.GetUris())
-		for _, uri := range req.GetUris() {
-			hashBytes := sha256.Sum256([]byte(uri))
-			hashStr := hex.EncodeToString(hashBytes[:])
-			found, size := s.cache.Contains(ctx, cache.CAS, hashStr, -1)
-			if !found {
-				s.errorLogger.Printf("CAS for uri %s sha %s not found in cache", req.GetUris(), sha256Str)
-				continue
-			}
+	  // log the condition
+	  s.errorLogger.Printf("SHA for uri %s not set; Hence defaulting to the URIs", req.GetUris())
+	  for _, uri := range req.GetUris() {
+      found, size := s.cache.Contains(ctx, cache.CAS, uri, -1)
+      if !found {
+        s.errorLogger.Printf("CAS for uri %s sha %s not found in cache", req.GetUris(), sha256Str)
+        continue
+      }
 
-			if size < 0 {
-				// We don't know the size yet (bad http backend?).
-				r, actualSize, err := s.cache.Get(ctx, cache.CAS, hashStr, -1, 0)
-				if r != nil {
-					defer r.Close()
-				}
-				if err != nil || actualSize < 0 {
-					s.errorLogger.Printf("failed to get CAS %s from proxy backend size: %d err: %v",
-						uri, actualSize, err)
-					continue
-				}
-				size = actualSize
-			}
+      if size < 0 {
+        // We don't know the size yet (bad http backend?).
+        r, actualSize, err := s.cache.Get(ctx, cache.CAS, uri, -1, 0)
+        if r != nil {
+          defer r.Close()
+        }
+        if err != nil || actualSize < 0 {
+          s.errorLogger.Printf("failed to get CAS %s from proxy backend size: %d err: %v",
+            uri, actualSize, err)
+          continue
+        }
+        size = actualSize
+      }
 
-			return &asset.FetchBlobResponse{
-				Status: &status.Status{Code: int32(codes.OK)},
-				BlobDigest: &pb.Digest{
-					Hash:      sha256Str,
-					SizeBytes: size,
-				},
-			}, nil
-		}
-	}
+      return &asset.FetchBlobResponse{
+        Status: &status.Status{Code: int32(codes.OK)},
+        BlobDigest: &pb.Digest{
+          Hash:      sha256Str,
+          SizeBytes: size,
+        },
+      }, nil
+    }
+  }
 
 	// Cache miss.
 
 	// See if we can download one of the URIs.
 
 	for _, uri := range req.GetUris() {
-		// sha256 := sha256Str
-		// if sha256 == "" {
-		// 	s.errorLogger.Printf("SHA for uri %s not set; Hence defaulting to the URI", uri)
-		// 	sha256 = uri
-		// }
-		ok, actualHash, size := s.fetchItem(ctx, uri, sha256Str)
+	  sha256 := sha256Str
+	  if sha256 == "" {
+	    s.errorLogger.Printf("SHA for uri %s not set; Hence defaulting to the URI", uri)
+	    sha256 = uri
+    }
+		ok, actualHash, size := s.fetchItem(ctx, uri, sha256)
 		if ok {
 			return &asset.FetchBlobResponse{
 				Status: &status.Status{Code: int32(codes.OK)},
@@ -210,8 +208,8 @@ func (s *grpcServer) fetchItem(ctx context.Context, uri string, expectedHash str
 	if expectedHash == "" || expectedSize < 0 {
 		// We can't call Put until we know the hash and size.
 
-		s.accessLogger.Printf("expectedSize: %d", expectedSize)
-		s.accessLogger.Printf("expectedHash: %s", expectedHash)
+    s.accessLogger.Printf("expectedSize: %d", expectedSize)
+    s.accessLogger.Printf("expectedHash: %s", expectedHash)
 		data, err := io.ReadAll(resp.Body)
 		if err != nil {
 			s.errorLogger.Printf("failed to read data: %v", uri)
@@ -225,15 +223,10 @@ func (s *grpcServer) fetchItem(ctx context.Context, uri string, expectedHash str
 		if expectedHash != "" && hashStr != expectedHash {
 			s.errorLogger.Printf("URI data has hash %s, expected %s",
 				hashStr, expectedHash)
-			return false, "", int64(-1)
+// 			return false, "", int64(-1)
 		}
 
-		if expectedHash == "" {
-			hashBytes := sha256.Sum256([]byte(uri))
-			expectedHash = hex.EncodeToString(hashBytes[:])
-		}
-
-		// 		expectedHash = hashStr
+// 		expectedHash = hashStr
 		rc = io.NopCloser(bytes.NewReader(data))
 	}
 
